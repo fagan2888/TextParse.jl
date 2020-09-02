@@ -4,13 +4,13 @@ using Mmap
 ismissingtype(T) = Missing <: T
 ismissingeltype(T) = missingtype(eltype(T))
 
-const UnionMissing{T} = Union{Missing, T}
+const UnionMissing{T} = Union{Missing,T}
 
 export csvread
 const current_record = Ref{Any}()
 const debug = Ref{Bool}(false)
 
-const StringLike = Union{AbstractString, StrRange}
+const StringLike = Union{AbstractString,StrRange}
 
 optionsiter(opts::AbstractDict) = opts
 optionsiter(opts::AbstractVector) = enumerate(opts)
@@ -21,7 +21,7 @@ function getbyheader(opts, header, i::AbstractString)
     if !(i in header)
         throw(ArgumentError("Unknown column $i"))
     end
-    getbyheader(opts, header, something(findfirst(isequal(i), header), length(header)+1))
+    getbyheader(opts, header, something(findfirst(isequal(i), header), length(header) + 1))
 end
 
 function optionsiter(opts::AbstractDict, header)
@@ -79,7 +79,7 @@ Read CSV from `file`. Returns a tuple of 2 elements:
 function csvread(file::String, delim=','; kwargs...)
     cols, canonnames, parsers, finalrows = _csvread_f(file, delim; kwargs...)
 
-    return ((col for col in cols if col!==nothing)...,), [colname for (col, colname) in zip(cols, canonnames) if col!==nothing]
+    return ((col for col in cols if col !== nothing)...,), [colname for (col, colname) in zip(cols, canonnames) if col !== nothing]
 end
 
 function csvread(file::IOStream, delim=','; kwargs...)
@@ -98,7 +98,7 @@ end
 function _csvread(str::AbstractString, delim=','; kwargs...)
     cols, canonnames, parsers, finalrows = _csvread_internal(str, delim; kwargs...)
 
-    return ((col for col in cols if col!==nothing)...,), [colname for (col, colname) in zip(cols, canonnames) if col!==nothing]
+    return ((col for col in cols if col !== nothing)...,), [colname for (col, colname) in zip(cols, canonnames) if col !== nothing]
 end
 
 function _csvread_f(file::AbstractString, delim=','; kwargs...)
@@ -113,19 +113,19 @@ function _csvread_f(file::AbstractString, delim=','; kwargs...)
     else # Otherwise just try to read the file
         return open(file, "r") do io
             data = Mmap.mmap(io)
-            try
+                try
                 _csvread_internal(VectorBackedUTF8String(data), delim; filename=file, kwargs...)
             finally
-                finalize(data)
+finalize(data)
             end
         end
     end
 end
 
-const ColsPool = OrderedDict{Union{Int, String}, Union{AbstractVector, Nothing}}
+const ColsPool = OrderedDict{Union{Int,String},Union{AbstractVector,Nothing}}
 
 function csvread(files::AbstractVector{T},
-                 delim=','; kwargs...) where {T<:AbstractString}
+                 delim=','; kwargs...) where {T <: AbstractString}
     @assert !isempty(files)
     colspool = ColsPool()
     cols, headers, parsers, nrows = try
@@ -141,12 +141,12 @@ function csvread(files::AbstractVector{T},
     count = Int[nrows]
     prev = nrows
     for f in files[2:end]
-        if !isempty(cols) && length(cols[findfirst(i->i!==nothing, cols)]) == nrows
+        if !isempty(cols) && length(cols[findfirst(i -> i !== nothing, cols)]) == nrows
             n = ceil(Int, nrows * sqrt(2))
             resizecols(colspool, n)
         end
         cols, headers, parsers, nrows = try
-            _csvread_f(f, delim; rowno=nrows+1, colspool=colspool,
+            _csvread_f(f, delim; rowno=nrows + 1, colspool=colspool,
                        prevheaders=headers, noresize=true, prev_parsers=parsers, kwargs...)
         catch err
             println(stderr, "Error parsing $(f)")
@@ -157,7 +157,7 @@ function csvread(files::AbstractVector{T},
     end
 
     resizecols(colspool, nrows)
-    ((i[2] for i in colspool if i[2]!==nothing)...,), [i[1] for i in colspool if i[2]!==nothing], count
+    ((i[2] for i in colspool if i[2] !== nothing)...,), [i[1] for i in colspool if i[2] !== nothing], count
 end
 
 # read CSV in a string
@@ -177,11 +177,11 @@ function _csvread_internal(str::AbstractString, delim=',';
                  header_exists=true,
                  nastrings=NA_STRINGS,
                  colnames=String[],
-                 #ignore_empty_rows=true,
-                 colspool = ColsPool(),
-                 row_estimate = !isempty(colspool) ?
-                     length(first(i for i in colspool if i[2]!==nothing)[2]) : 0,
-                 prev_parsers = nothing,
+                 # ignore_empty_rows=true,
+                 colspool=ColsPool(),
+                 row_estimate=!isempty(colspool) ?
+                     length(first(i for i in colspool if i[2] !== nothing)[2]) : 0,
+                 prev_parsers=nothing,
                  colparsers=[],
                  filename=nothing,
                  type_detect_rows=20)
@@ -196,10 +196,10 @@ function _csvread_internal(str::AbstractString, delim=',';
     pos = firstindex(str)
     rowlength_sum = 0   # sum of lengths of rows, for estimating row_estimate
     lineno = 0
-
+        
     y = iterate(str, pos)
-    if y!==nothing
-        c = y[1]; i = y[2]
+    if y !== nothing
+            c = y[1]; i = y[2]
         if c == '\ufeff'
             pos = i
         end
@@ -210,7 +210,7 @@ function _csvread_internal(str::AbstractString, delim=',';
     while lineno < skiplines_begin
         pos = getlineend(str, pos)
         y2 = iterate(str, pos)
-        y2===nothing && error("Internal error.")
+        y2 === nothing && error("Internal error.")
         pos = y2[2]
         pos, lines = eatnewlines(str, pos, len)
         lineno += lines
@@ -268,12 +268,12 @@ function _csvread_internal(str::AbstractString, delim=',';
 
     # the last field is delimited by line end
     if !isempty(guess)
-        guess[end] = swapinner(guess[end], guess[end]; eoldelim = true)
+        guess[end] = swapinner(guess[end], guess[end]; eoldelim=true)
         rec = Record((guess...,))
     else
         parsers = prev_parsers === nothing ? Dict() : copy(prev_parsers)
         rec = Record(())
-        return (), String[], parsers, rowno-1
+        return (), String[], parsers, rowno - 1
     end
 
     if isempty(canonnames)
@@ -284,7 +284,7 @@ function _csvread_internal(str::AbstractString, delim=',';
 
     if row_estimate == 0
         # just an estimate, with some margin
-        row_estimate = ceil(Int, (len-pos) / ((pos1-pos)/max(1, type_detect_rows)) * sqrt(2))
+        row_estimate = ceil(Int, (len - pos) / ((pos1 - pos) / max(1, type_detect_rows)) * sqrt(2))
     end
 
     if isempty(colspool)
@@ -298,12 +298,12 @@ function _csvread_internal(str::AbstractString, delim=',';
             c = get(canonnames, i, i)
             f = rec.fields[i]
             if haskey(colspool, c)
-                if eltype(colspool[c]) == fieldtype(f) || (fieldtype(f) <: StrRange && eltype(colspool[c]) <: AbstractString) || colspool[c]===nothing
+                if eltype(colspool[c]) == fieldtype(f) || (fieldtype(f) <: StrRange && eltype(colspool[c]) <: AbstractString) || colspool[c] === nothing
                     return colspool[c]
                 else
                     try
                         return colspool[c] = promote_column(colspool[c],
-                                                            rowno-1,
+                                                            rowno - 1,
                                                             fieldtype(f), stringtype, stringarraytype)
                     catch err
                         error("Could not convert column $c of eltype $(eltype(colspool[c])) to eltype $(fieldtype(f))")
@@ -318,20 +318,20 @@ function _csvread_internal(str::AbstractString, delim=',';
         for k in missingcols
             if !ismissingtype(eltype(colspool[k])) && !(eltype(colspool[k]) <: StringLike)
                 colspool[k] = promote_column(colspool[k],
-                                             rowno-1,
+                                             rowno - 1,
                                              UnionMissing{eltype(colspool[k])}, stringtype, stringarraytype)
-            end
+    end
         end
         cols = (_cols...,)
     end
 
-    if any(c->c!==nothing && length(c) != row_estimate, cols)
+    if any(c -> c !== nothing && length(c) != row_estimate, cols)
         resizecols(colspool, row_estimate)
     end
 
     lineno_start_of_data = lineno
     pos_start_of_data = pos
-
+        
     finalrows = rowno
     @label retry
     try
@@ -380,9 +380,9 @@ function _csvread_internal(str::AbstractString, delim=',';
             if length(failed_strs) != length(cols[err.colno:end])
                 fn = err.filename === nothing ? "" : "In $(err.filename) "
                 @warn("$(fn)line $(err.lineno) has $(length(err.colno) + length(failed_strs) - 1) fields but $(length(cols)) fields are expected. Skipping row.")
-                pos = last(rng)+1
+                pos = last(rng) + 1
                 rowno = err.rowno
-                lineno = err.lineno+1
+                lineno = err.lineno + 1
                 @goto retry
             end
 
@@ -392,13 +392,13 @@ function _csvread_internal(str::AbstractString, delim=',';
                 f = rec.fields[colidx]
                 name = get(canonnames, colidx, colidx)
                 c = promote_field(s, f, col, err, nastrings, stringtype, stringarraytype, opts)
-                if c[2]==:reparserequired
+                if c[2] == :reparserequired
                     reparse_needed[colidx] = true
                     c = c[1], stringarraytype{stringtype,1}(undef, row_estimate)
                 end
                 colspool[name] = c[2]
                 c
-            end
+                end
 
             if any(reparse_needed)
                 new_fields = [reparse_needed[i] ? tofield(String, opts, stringarraytype) : tofield(nothing, opts, stringarraytype) for i in 1:length(reparse_needed)]
@@ -407,7 +407,7 @@ function _csvread_internal(str::AbstractString, delim=',';
 
                 cols2 = makeoutputvecs(rec2, row_estimate, stringtype, stringarraytype)
                 for (iii, val) in enumerate(cols2)
-                    if val!==nothing
+                    if val !== nothing
                         colspool[iii] = val
                     end
                 end
@@ -415,9 +415,9 @@ function _csvread_internal(str::AbstractString, delim=',';
                 finalrows2 = parsefill!(str, opts, rec2, row_estimate, cols2, colspool,
                     pos_start_of_data, lineno_start_of_data, 1, l, commentchar)
 
-                for iii=err.colno:length(cols)
+                for iii = err.colno:length(cols)
                     if reparse_needed[iii]
-                        promoted[iii-err.colno+1] = (promoted[iii-err.colno+1][1], cols2[iii])
+                        promoted[iii - err.colno + 1] = (promoted[iii - err.colno + 1][1], cols2[iii])
                     end
                 end
             end
@@ -429,7 +429,7 @@ function _csvread_internal(str::AbstractString, delim=',';
                 println(stderr, "Could not determine which type to promote column to.")
                 rethrow(err)
             end
-
+            
             fieldsvec = Any[rec.fields...]
             fieldsvec[err.colno:end] = newfields
             typeof(cols)
@@ -441,7 +441,7 @@ function _csvread_internal(str::AbstractString, delim=',';
             rowno = err.rowno
             lineno = err.lineno
             pos = first(rng)
-            current_record[] = rec
+        current_record[] = rec
             @goto retry
 
         end
@@ -467,10 +467,10 @@ function promote_field(failed_str, field, col, err, nastrings, stringtype, strin
         return field, col
     end
     if newtoken isa StringToken || (newtoken isa Quoted && newtoken.inner isa StringToken)
-        return swapinner(field, newtoken), :reparserequired
+    return swapinner(field, newtoken), :reparserequired
     end
     newcol = try
-        promote_column(col,  err.rowno-1, fieldtype(newtoken), stringtype, stringarraytype)
+        promote_column(col,  err.rowno - 1, fieldtype(newtoken), stringtype, stringarraytype)
     catch err2
         # TODO Should this really be shown?
         Base.showerror(stderr, err2)
@@ -495,13 +495,13 @@ function promote_column(col, rowno, T, stringtype, stringarraytype, inner=false)
         end
     elseif ismissingtype(T)
         arr = convert(Array{UnionMissing{T}}, col)
-        for i=rowno+1:length(arr)
+        for i = rowno + 1:length(arr)
             # if we convert an Array{Int} to be missing-friendly, we will not have missing in here by default
             arr[i] = missing
         end
         return arr
     else
-        newcol = Array{T, 1}(undef, length(col))
+        newcol = Array{T,1}(undef, length(col))
         copyto!(newcol, 1, col, 1, rowno)
         newcol
     end
@@ -520,7 +520,7 @@ function readcolnames(str, opts, pos, colnames, len=lastindex(str))
     for (i, v) in optionsiter(colnames, colnames_inferred)
         colnames_inferred[i] = v
     end
-    colnames_inferred, lineend+1
+    colnames_inferred, lineend + 1
 end
 
 function guesscolparsers(str::AbstractString, len, header, opts::LocalOpts, pos::Int,
@@ -530,7 +530,7 @@ function guesscolparsers(str::AbstractString, len, header, opts::LocalOpts, pos:
     prevfields = String[]
 
     givenkeys = !isempty(colparsers) ? first.(collect(optionsiter(colparsers, header))) : []
-    for i2=1:nrows
+    for i2 = 1:nrows
         pos, _ = eatnewlines(str, pos, len)
 
         # Move past commented lines before guessing.
@@ -542,7 +542,7 @@ function guesscolparsers(str::AbstractString, len, header, opts::LocalOpts, pos:
         fields = quotedsplit(str, opts, true, pos, lineend)
 
         if i2 == 1
-            guess = Any[Unknown() for i3=1:length(fields)] # idk
+            guess = Any[Unknown() for i3 = 1:length(fields)] # idk
             if prevs !== nothing && !isempty(header)
                 # sometimes length(fields) can be != length(header).
                 # this sucks!
@@ -567,14 +567,14 @@ function guesscolparsers(str::AbstractString, len, header, opts::LocalOpts, pos:
                 println(stderr, "Error while guessing a common type for column $j")
                 println(stderr, "new value: $(fields[j]), prev guess was: $(guess[j])")
                 if j > 1
-                    println(stderr, "prev value: $(fields[j-1])")
+                    println(stderr, "prev value: $(fields[j - 1])")
                 end
 
                 rethrow(err)
             end
         end
         prevfields = fields
-        pos = lineend+1
+        pos = lineend + 1
     end
 
     # override guesses with user request
@@ -592,16 +592,16 @@ function parsefill!(str::AbstractString, opts, rec::RecN{N}, nrecs, cols, colspo
     pos <= l && while true
         prev_j = pos
         lineno += lines
-
+        
         # Do not try to parse commented lines.
         pos, lines = eatcommentlines(str, pos, l, commentchar)
         lineno += lines
-        pos > l && return rowno-1
+        pos > l && return rowno - 1
 
         res = tryparsesetindex(rec, str, pos, l, cols, rowno, opts)
         if !issuccess(res)
             pos, fieldpos, colno, err_code = geterror(res)
-            throw(CSVParseError(err_code, str, rec, lineno+1, rowno,
+            throw(CSVParseError(err_code, str, rec, lineno + 1, rowno,
                                 colno, pos, fieldpos))
         else
             pos = value(res)
@@ -620,32 +620,32 @@ function parsefill!(str::AbstractString, opts, rec::RecN{N}, nrecs, cols, colspo
             # grow
             nrecs = ceil(Int, rowno * sqrt(2)) # updated estimate
             resizecols(colspool, nrecs)
-        end
+end
     end
     return rowno # finished before starting
 end
 
 function resizecols(colspool, nrecs)
     for (h, c) in colspool
-        if c!==nothing
+        if c !== nothing
             l = length(c)
             resize!(c, nrecs)
             if eltype(c) <: AbstractString
                 # fill with blanks
-                c[l+1:nrecs] .= ""
+                c[l + 1:nrecs] .= ""
             elseif eltype(c) <: StrRange
-                c[l+1:nrecs] .= StrRange(1,0)
+                c[l + 1:nrecs] .= StrRange(1, 0)
             end
         end
     end
 end
 
 function makeoutputvecs(rec, N, stringtype, stringarraytype)
-    map(f->makeoutputvec(f, N, stringtype, stringarraytype), rec.fields)
+    map(f -> makeoutputvec(f, N, stringtype, stringarraytype), rec.fields)
 end
 
 function makeoutputvec(eltyp, N, stringtype, stringarraytype)
-    if fieldtype(eltyp)===Nothing
+    if fieldtype(eltyp) === Nothing
         return nothing
     elseif fieldtype(eltyp) == Missing # we weren't able to detect the type,
                                    # all cells were blank
@@ -653,7 +653,7 @@ function makeoutputvec(eltyp, N, stringtype, stringarraytype)
     elseif fieldtype(eltyp) == StrRange
         stringarraytype{stringtype,1}(undef, N)
     elseif ismissingtype(fieldtype(eltyp)) && fieldtype(eltyp) <: StrRange
-        stringarraytype{Union{Missing, String},1}(undef, N)
+        stringarraytype{Union{Missing,String},1}(undef, N)
     else
         Array{fieldtype(eltyp)}(undef, N)
     end
@@ -680,7 +680,7 @@ function CSVParseError(e_code, str, rec, lineno, rowno, colno, pos, fieldpos)
 end
 
 
-function Base.showerror(io::IO, err::CSVParseError)
+    function Base.showerror(io::IO, err::CSVParseError)
     if err.filename !== nothing
         print(io, "CSV parsing error in $(err.filename) ")
     else
@@ -694,16 +694,16 @@ function Base.showerror(io::IO, err::CSVParseError)
 end
 
 function showerrorchar(str, pos, maxchar)
-    hmaxchar = round(Int, maxchar/2)
+    hmaxchar = round(Int, maxchar / 2)
     rng = getlineat(str, pos)
     substr = strip(str[rng])
-    pointer = String(['_' for i=1:(pos-first(rng)-1)]) * "^"
+    pointer = String(['_' for i = 1:(pos - first(rng) - 1)]) * "^"
     if length(substr) > maxchar
         # center the error char
-        lst = thisind(str, min(pos+ceil(Int, hmaxchar), last(rng)))
-        fst = thisind(str, max(first(rng), pos-hmaxchar))
+        lst = thisind(str, min(pos + ceil(Int, hmaxchar), last(rng)))
+        fst = thisind(str, max(first(rng), pos - hmaxchar))
         substr = "..." * strip(str[fst:lst]) * "..."
-        pointer = String(['_' for i=1:(pos-fst+2)]) * "^"
+        pointer = String(['_' for i = 1:(pos - fst + 2)]) * "^"
     end
     substr * "\n" * pointer
 end
@@ -722,7 +722,7 @@ function quotedsplit(str, opts, includequotes, i=firstindex(str), l=lastindex(st
         push!(strs, x)
     end
     y1 = iterate(str, prevind(str, i))
-    y1===nothing && error("Internal error.")
+    y1 === nothing && error("Internal error.")
     c = y1[1]; i = y1[2]
     if c == Char(opts.endchar)
         # edge case where there's a delim at the end of the string
